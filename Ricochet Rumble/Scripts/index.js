@@ -1,215 +1,276 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const board = document.getElementById('board');
-    const player1TimerElement = document.getElementById('player1-timer');
-    const player2TimerElement = document.getElementById('player2-timer');
-    const tossHeadButton = document.getElementById('toss-head');
-    const tossTailButton = document.getElementById('toss-tail');
-    const pauseButton = document.getElementById('pause');
-    const resetButton = document.getElementById('reset');
-    const undoButton = document.getElementById('undo');
-    const redoButton = document.getElementById('redo');
-  
-    let boardState = Array(64).fill(null);
-    let currentPlayer = 1; // 1 for player1, 2 for player2
-    let player1Time = 300; // 5 minutes in seconds
-    let player2Time = 300;
-    let gameInterval;
-    let isPaused = false;
-  
-    const pieces = [
-      { type: 'titan', position: 0, player: 1 },
-      { type: 'tank', position: 1, player: 1 },
-      { type: 'ricochet', position: 2, player: 1 },
-      { type: 'semi-ricochet', position: 3, player: 1 },
-      { type: 'cannon', position: 7, player: 1 },
-      { type: 'titan', position: 56, player: 2 },
-      { type: 'tank', position: 57, player: 2 },
-      { type: 'ricochet', position: 58, player: 2 },
-      { type: 'semi-ricochet', position: 59, player: 2 },
-      { type: 'cannon', position: 63, player: 2 },
-    ];
-  
-    function initializeBoard() {
-      pieces.forEach(piece => {
-        const cell = board.children[piece.position];
-        const pieceElement = document.createElement('div');
-        pieceElement.classList.add('piece', piece.type);
-        pieceElement.dataset.player = piece.player;
-        pieceElement.dataset.type = piece.type;
-        cell.appendChild(pieceElement);
-        boardState[piece.position] = piece;
-      });
+class Game {
+    constructor() {
+        this.board = this.createBoard();
+        this.setupBoard();
+        this.setupControls();
+        this.currentPlayer = 'black';
+        this.paused = false;
+        this.history = [];
+        this.redoStack = [];
+        this.timerBlack = 300; // 5 minutes in seconds
+        this.timerWhite = 300; // 5 minutes in seconds
+        this.startTimers();
     }
-  
-    function movePiece(index, targetIndex) {
-      const piece = boardState[index];
-      const targetPiece = boardState[targetIndex];
-      if (piece && (!targetPiece || targetPiece.player !== piece.player)) {
-        const targetCell = board.children[targetIndex];
-        const pieceElement = board.children[index].querySelector('.piece');
-        targetCell.appendChild(pieceElement);
-        boardState[targetIndex] = piece;
-        boardState[index] = null;
-        piece.position = targetIndex;
-  
-        // Implement shooting after the move
-        shootCannon(piece.player);
-        currentPlayer = 3 - currentPlayer;
-      }
-    }
-  
-    function shootCannon(player) {
-      const cannon = pieces.find(p => p.type === 'cannon' && p.player === player);
-      const bullet = document.createElement('div');
-      bullet.classList.add('bullet');
-      const cannonCell = board.children[cannon.position];
-      cannonCell.appendChild(bullet);
-      // Move the bullet across the board
-      let bulletPosition = cannon.position;
-      const interval = setInterval(() => {
-        const nextPosition = bulletPosition + (player === 1 ? 1 : -1);
-        if (nextPosition < 0 || nextPosition > 63) {
-          clearInterval(interval);
-          bullet.remove();
-        } else {
-          const nextCell = board.children[nextPosition];
-          const nextPiece = boardState[nextPosition];
-          if (nextPiece) {
-            // Handle bullet hitting a piece
-            if (nextPiece.type === 'titan') {
-              alert(`Player ${player} wins!`);
-              clearInterval(interval);
-              resetGame();
-            } else if (nextPiece.type === 'ricochet') {
-              // Reflect the bullet
-              bulletPosition = reflectBullet(bulletPosition, nextPiece.position);
-            } else if (nextPiece.type === 'semi-ricochet') {
-              // Reflect or disappear the bullet based on the side it hits
-              bulletPosition = handleSemiRicochet(bulletPosition, nextPiece.position);
-            } else if (nextPiece.type === 'tank') {
-              // Pass through or disappear based on the side it hits
-              bulletPosition = handleTank(bulletPosition, nextPiece.position);
-            } else {
-              clearInterval(interval);
-              bullet.remove();
+
+    createBoard() {
+        const board = [];
+        for (let row = 0; row < 8; row++) {
+            const rowArray = [];
+            for (let col = 0; col < 8; col++) {
+                rowArray.push(null);
             }
-          } else {
-            bulletPosition = nextPosition;
-            const currentCell = board.children[bulletPosition];
-            currentCell.appendChild(bullet);
-          }
+            board.push(rowArray);
         }
-      }, 100);
+        return board;
     }
-  
-    function reflectBullet(position, ricochetPosition) {
-      // Calculate reflection direction based on ricochet position
-      const direction = (position < ricochetPosition) ? -1 : 1;
-      return position + direction * 8; // Reflect vertically
-    }
-  
-    function handleSemiRicochet(position, semiRicochetPosition) {
-      // Handle reflection or disappearance based on the side hit
-      const direction = (position < semiRicochetPosition) ? -1 : 1;
-      if (direction === -1) {
-        return position + direction * 7; // Reflect diagonally
-      } else {
-        return -1; // Bullet disappears
-      }
-    }
-  
-    function handleTank(position, tankPosition) {
-      // Allow passing through or make bullet disappear based on the side hit
-      const direction = (position < tankPosition) ? 1 : -1;
-      if (direction === 1) {
-        return position + direction * 8; // Pass through vertically
-      } else {
-        return -1; // Bullet disappears
-      }
-    }
-  
-    function startGame() {
-      gameInterval = setInterval(updateTimers, 1000);
-    }
-  
-    function updateTimers() {
-      if (!isPaused) {
-        if (currentPlayer === 1) {
-          player1Time--;
-          if (player1Time <= 0) {
-            alert('Player 2 wins by timeout!');
-            resetGame();
-          }
-        } else {
-          player2Time--;
-          if (player2Time <= 0) {
-            alert('Player 1 wins by timeout!');
-            resetGame();
-          }
+
+    setupBoard() {
+        const boardElement = document.getElementById('game-board');
+        boardElement.innerHTML = '';
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                boardElement.appendChild(cell);
+            }
         }
-        updateTimerDisplay();
-      }
+        this.placePieces();
+        this.setupClickHandlers();
     }
-  
-    function updateTimerDisplay() {
-      player1TimerElement.textContent = formatTime(player1Time);
-      player2TimerElement.textContent = formatTime(player2Time);
+
+    placePieces() {
+        this.addPiece(0, 0, 'tank', 'black');
+        this.addPiece(0, 1, 'ricochet', 'black');
+        this.addPiece(0, 2, 'semi-ricochet', 'black');
+        this.addPiece(0, 3, 'titan', 'black');
+        this.addPiece(0, 4, 'semi-ricochet', 'black');
+        this.addPiece(0, 5, 'ricochet', 'black');
+        this.addPiece(0, 6, 'tank', 'black');
+        this.addPiece(0, 7, 'cannon', 'black');
+
+        this.addPiece(7, 0, 'tank', 'white');
+        this.addPiece(7, 1, 'ricochet', 'white');
+        this.addPiece(7, 2, 'semi-ricochet', 'white');
+        this.addPiece(7, 3, 'titan', 'white');
+        this.addPiece(7, 4, 'semi-ricochet', 'white');
+        this.addPiece(7, 5, 'ricochet', 'white');
+        this.addPiece(7, 6, 'tank', 'white');
+        this.addPiece(7, 7, 'cannon', 'white');
     }
-  
-    function formatTime(seconds) {
-      const minutes = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+
+    addPiece(row, col, type, player) {
+        const piece = document.createElement('div');
+        piece.classList.add('piece', type);
+        piece.dataset.player = player;
+        piece.dataset.type = type;
+        piece.dataset.row = row;
+        piece.dataset.col = col;
+        piece.innerText = player === 'black' ? '1' : '2';
+
+        const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        cell.appendChild(piece);
+        this.board[row][col] = piece;
     }
-  
-    function resetGame() {
-      clearInterval(gameInterval);
-      boardState = boardState.map(() => null);
-      currentPlayer = 1;
-      player1Time = 300;
-      player2Time = 300;
-      updateTimerDisplay();
-      isPaused = false;
-      board.innerHTML = '';
-      initializeBoard();
+
+    selectPiece(piece) {
+        if (this.paused) return;
+        if (piece.dataset.player !== this.currentPlayer) return;
+
+        const selectedPiece = document.querySelector('.selected');
+        if (selectedPiece) {
+            selectedPiece.classList.remove('selected');
+            this.clearValidMoves();
+        }
+        piece.classList.add('selected');
+        this.showValidMoves(piece);
     }
-  
-    pauseButton.addEventListener('click', () => {
-      isPaused = !isPaused;
-      pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
-    });
-  
-    resetButton.addEventListener('click', resetGame);
-  
-    undoButton.addEventListener('click', () => {
-      // Implement undo functionality
-    });
-  
-    redoButton.addEventListener('click', () => {
-      // Implement redo functionality
-    });
-  
-    tossHeadButton.addEventListener('click', () => {
-      const tossResult = Math.random() < 0.5 ? 'head' : 'tail';
-      alert(`Toss result: ${tossResult}`);
-      currentPlayer = tossResult === 'head' ? 1 : 2;
-      startGame();
-    });
-  
-    tossTailButton.addEventListener('click', () => {
-      const tossResult = Math.random() < 0.5 ? 'head' : 'tail';
-      alert(`Toss result: ${tossResult}`);
-      currentPlayer = tossResult === 'tail' ? 1 : 2;
-      startGame();
-    });
-  
-    board.addEventListener('click', (e) => {
-      if (e.target.classList.contains('cell') || e.target.classList.contains('piece')) {
-        const index = parseInt(e.target.closest('.cell').dataset.index);
-        // Implement logic to handle piece selection and movement
-      }
-    });
-  
-    initializeBoard();
-  });
-  
+
+    movePiece(piece, newRow, newCol) {
+        const oldRow = parseInt(piece.dataset.row);
+        const oldCol = parseInt(piece.dataset.col);
+
+        if (this.isValidMove(piece, newRow, newCol)) {
+            this.history.push(this.board.map(row => row.slice())); // Save current state for undo
+            this.redoStack = []; // Clear redo stack
+            this.board[oldRow][oldCol] = null; // Clear old position
+            this.board[newRow][newCol] = piece;
+            piece.dataset.row = newRow;
+            piece.dataset.col = newCol;
+
+            const cell = document.querySelector(`.cell[data-row="${newRow}"][data-col="${newCol}"]`);
+            cell.appendChild(piece);
+
+            this.clearValidMoves();
+            this.switchPlayer();
+        }
+    }
+
+    isValidMove(piece, newRow, newCol) {
+        const oldRow = parseInt(piece.dataset.row);
+        const oldCol = parseInt(piece.dataset.col);
+        const rowDiff = Math.abs(newRow - oldRow);
+        const colDiff = Math.abs(newCol - oldCol);
+
+        return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+    }
+
+    showValidMoves(piece) {
+        const row = parseInt(piece.dataset.row);
+        const col = parseInt(piece.dataset.col);
+        const directions = [
+            { dr: -1, dc: 0 },
+            { dr: 1, dc: 0 },
+            { dr: 0, dc: -1 },
+            { dr: 0, dc: 1 },
+        ];
+
+        directions.forEach(dir => {
+            const newRow = row + dir.dr;
+            const newCol = col + dir.dc;
+            if (this.isWithinBounds(newRow, newCol) && !this.board[newRow][newCol]) {
+                const cell = document.querySelector(`.cell[data-row="${newRow}"][data-col="${newCol}"]`);
+                const marker = document.createElement('div');
+                marker.classList.add('valid-move');
+                cell.appendChild(marker);
+                marker.addEventListener('click', () => this.movePiece(piece, newRow, newCol));
+            }
+        });
+    }
+
+    clearValidMoves() {
+        document.querySelectorAll('.valid-move').forEach(marker => marker.remove());
+    }
+
+    isWithinBounds(row, col) {
+        return row >= 0 && row < 8 && col >= 0 && col < 8;
+    }
+
+    switchPlayer() {
+        this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+    }
+
+    shootCannon(player) {
+        const opponent = player === 'black' ? 'white' : 'black';
+        const cannon = document.querySelector(`.piece.cannon[data-player="${player}"]`);
+        if (!cannon) return;
+
+        const cannonRow = parseInt(cannon.dataset.row);
+        const cannonCol = parseInt(cannon.dataset.col);
+        const directions = [
+            { dr: -1, dc: 0 },
+            { dr: 1, dc: 0 },
+            { dr: 0, dc: -1 },
+            { dr: 0, dc: 1 },
+        ];
+
+        directions.forEach(dir => {
+            let row = cannonRow;
+            let col = cannonCol;
+
+            while (this.isWithinBounds(row + dir.dr, col + dir.dc)) {
+                row += dir.dr;
+                col += dir.dc;
+                const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                if (this.board[row][col]) {
+                    if (this.board[row][col].dataset.player === opponent) {
+                        this.board[row][col].remove();
+                        this.board[row][col] = null;
+                    }
+                    break;
+                } else {
+                    const bullet = document.createElement('div');
+                    bullet.classList.add('bullet');
+                    cell.appendChild(bullet);
+                    setTimeout(() => bullet.remove(), 300);
+                }
+            }
+        });
+    }
+
+    startTimers() {
+        this.timerInterval = setInterval(() => {
+            if (!this.paused) {
+                if (this.currentPlayer === 'black') {
+                    this.timerBlack--;
+                    if (this.timerBlack <= 0) {
+                        this.declareWinner('white');
+                    }
+                } else {
+                    this.timerWhite--;
+                    if (this.timerWhite <= 0) {
+                        this.declareWinner('black');
+                    }
+                }
+                this.updateTimers();
+            }
+        }, 1000);
+    }
+
+    updateTimers() {
+        const formatTime = time => {
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        };
+
+        document.getElementById('top-timer').innerText = formatTime(this.timerBlack);
+        document.getElementById('bottom-timer').innerText = formatTime(this.timerWhite);
+    }
+
+    declareWinner(winner) {
+        clearInterval(this.timerInterval);
+        alert(`${winner === 'black' ? 'Player 1' : 'Player 2'} wins!`);
+        this.resetGame();
+    }
+
+    resetGame() {
+        this.board = this.createBoard();
+        this.setupBoard();
+        this.currentPlayer = 'black';
+        this.timerBlack = 300;
+        this.timerWhite = 300;
+        this.startTimers();
+    }
+
+    pauseResumeGame() {
+        this.paused = !this.paused;
+        document.getElementById('pause-resume-button').innerText = this.paused ? 'Resume' : 'Pause';
+    }
+
+    undo() {
+        if (this.history.length > 0) {
+            this.redoStack.push(this.board.map(row => row.slice()));
+            this.board = this.history.pop();
+            this.setupBoard();
+            this.switchPlayer();
+        }
+    }
+
+    redo() {
+        if (this.redoStack.length > 0) {
+            this.history.push(this.board.map(row => row.slice()));
+            this.board = this.redoStack.pop();
+            this.setupBoard();
+            this.switchPlayer();
+        }
+    }
+
+    setupControls() {
+        document.getElementById('pause-resume-button').addEventListener('click', () => this.pauseResumeGame());
+        document.getElementById('reset-button').addEventListener('click', () => this.resetGame());
+        document.getElementById('undo-button').addEventListener('click', () => this.undo());
+        document.getElementById('redo-button').addEventListener('click', () => this.redo());
+    }
+
+    setupClickHandlers() {
+        document.querySelectorAll('.piece').forEach(piece => {
+            piece.addEventListener('click', () => this.selectPiece(piece));
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new Game();
+});
