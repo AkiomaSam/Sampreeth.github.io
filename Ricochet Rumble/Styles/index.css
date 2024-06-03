@@ -1,78 +1,127 @@
 body {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     height: 100vh;
     margin: 0;
-    font-family: Arial, sans-serif;
-  }
-  
-  #game-container {
+    background-color: #f0f0f0;
+}
+
+#game-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-  
-  #board {
+}
+
+#controls {
+    margin-bottom: 10px;
+}
+
+button {
+    margin: 5px;
+    padding: 10px;
+}
+
+#timers {
+    display: flex;
+    justify-content: space-between;
+    width: 300px;
+    margin-bottom: 10px;
+}
+
+#top-timer-container, #bottom-timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#top-timer, #bottom-timer {
+    font-size: 24px;
+}
+
+#legend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+}
+
+#game-board {
     display: grid;
     grid-template-columns: repeat(8, 50px);
     grid-template-rows: repeat(8, 50px);
-    gap: 2px;
-    margin-bottom: 10px;
-  }
-  
-  .cell {
+    gap: 1px;
+}
+
+.cell {
     width: 50px;
     height: 50px;
-    background-color: #eee;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    font-size: 24px;
-  }
-  
-  .cell:nth-child(even) {
-    background-color: #ccc;
-  }
-  
-  #controls, #timer {
-    margin: 10px;
-  }
-  
-  #toss {
-    margin-top: 20px;
-  }
-
-  /* Existing CSS remains the same */
+    background-color: #fff;
+    border: 1px solid #000;
+    position: relative;
+}
 
 .piece {
     width: 100%;
     height: 100%;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     font-size: 18px;
-  }
-  
-  .titan { background-color: red; }
-  .tank { background-color: green; }
-  .ricochet { background-color: blue; }
-  .semi-ricochet { background-color: purple; }
-  .cannon { background-color: orange; }
-  
-  .cell {
+    font-weight: bold;
+}
+
+.titan {
+    background-color: gold;
+}
+
+.cannon {
+    background-color: red;
+}
+
+.tank {
+    background-color: green;
+}
+
+.semi-ricochet {
+    background: linear-gradient(45deg, blue 50%, transparent 50%);
+}
+
+/* Update the ricochet class to show a diagonal line */
+.ricochet {
+    background: linear-gradient(135deg, transparent 45%, purple 45%, purple 55%, transparent 55%);
     position: relative;
-  }
-  
-  .bullet {
+}
+
+/* Ensure bullet is visible */
+.bullet {
+    position: absolute;
     width: 10px;
     height: 10px;
-    background-color: black;
     border-radius: 50%;
+    background-color: black;
+}
+
+.valid-move {
     position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: green;
+    border-radius: 50%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-  }
-  
+}
