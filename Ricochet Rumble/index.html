@@ -1,30 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Board Game</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ricochet Rumble</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="game-container">
-    <div id="board"></div>
-    <div id="controls">
-      <button id="pause">Pause</button>
-      <button id="reset">Reset</button>
-      <button id="undo">Undo</button>
-      <button id="redo">Redo</button>
+    <div id="game-container">
+        <div id="controls">
+            <button id="pause-resume-button">Pause</button>
+            <button id="reset-button">Reset</button>
+            <button id="undo-button">Undo</button>
+            <button id="redo-button">Redo</button>
+        </div>
+        <div id="timers">
+            <div id="top-timer-container">
+                <div>Black Timer (Player 1)</div>
+                <div id="top-timer">5:00</div>
+            </div>
+            <div id="bottom-timer-container">
+                <div>White Timer (Player 2)</div>
+                <div id="bottom-timer">5:00</div>
+            </div>
+        </div>
+        <div id="legend">
+            <div>Legend:</div>
+            <div class="legend-item"><div class="legend-color titan"></div>Titan</div>
+            <div class="legend-item"><div class="legend-color cannon"></div>Cannon</div>
+            <div class="legend-item"><div class="legend-color tank"></div>Tank</div>
+            <div class="legend-item"><div class="legend-color ricochet"></div>Ricochet</div>
+            <div class="legend-item"><div class="legend-color semi-ricochet"></div>Semi-Ricochet</div>
+        </div>
+        <div id="game-board"></div>
     </div>
-    <div id="timer">
-      <div id="player1-timer">5:00</div>
-      <div id="player2-timer">5:00</div>
-    </div>
-    <div id="toss">
-      <button id="toss-head">Head</button>
-      <button id="toss-tail">Tail</button>
-    </div>
-  </div>
-  <script src="script.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
-
